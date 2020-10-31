@@ -35,6 +35,7 @@ var (
 	buildOrRunEngineVersion   string
 	buildOrRunDocker          bool
 	buildOrRunDebug           bool
+	buildOrRunJitRelease      bool
 	buildOrRunRelease         bool
 	buildOrRunProfile         bool
 	buildOrRunMode            build.Mode
@@ -50,6 +51,7 @@ func initCompileFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVar(&buildOrRunEngineVersion, "engine-version", config.BuildEngineDefault, "The flutter engine version to use.")
 	cmd.PersistentFlags().BoolVar(&buildOrRunDocker, "docker", false, "Execute the go build and packaging in a docker container. The Flutter build is always run locally")
 	cmd.PersistentFlags().BoolVar(&buildOrRunDebug, "debug", false, "Build a debug version of the app.")
+	cmd.PersistentFlags().BoolVar(&buildOrRunJitRelease, "jit-release", false, "Build a debug version of the app without the terminal windows on Windows.")
 	cmd.PersistentFlags().BoolVar(&buildOrRunRelease, "release", false, "Build a release version of the app. Currently very experimental")
 	cmd.PersistentFlags().BoolVar(&buildOrRunProfile, "profile", false, "Build a profile version of the app. Currently very experimental")
 	cmd.PersistentFlags().BoolVar(&buildOrRunSkipFlutter, "skip-flutter", false, "Skip the flutter steps")
@@ -233,6 +235,9 @@ func subcommandBuild(targetOS string, packagingTask packaging.Task, vmArguments 
 		if buildOrRunDebug {
 			buildFlags = append(buildFlags, "--debug")
 		}
+		if buildOrRunJitRelease {
+			buildFlags = append(buildFlags, "--jit-release")
+		}
 		if buildOrRunRelease {
 			buildFlags = append(buildFlags, "--release")
 		}
@@ -281,7 +286,7 @@ func initBuildParameters(targetOS string, defaultBuildOrRunMode build.Mode) {
 	}
 
 	numberOfBuildOrRunModeFlagsSet := 0
-	for _, flag := range []bool{buildOrRunDebug, buildOrRunRelease, buildOrRunProfile} {
+	for _, flag := range []bool{buildOrRunDebug, buildOrRunJitRelease, buildOrRunRelease, buildOrRunProfile} {
 		if flag {
 			numberOfBuildOrRunModeFlagsSet++
 		}
@@ -297,6 +302,9 @@ func initBuildParameters(targetOS string, defaultBuildOrRunMode build.Mode) {
 	if buildOrRunDebug {
 		buildOrRunMode = build.DebugMode
 	}
+	if buildOrRunJitRelease {
+		buildOrRunMode = build.JitReleaseMode
+	}
 	if buildOrRunRelease {
 		buildOrRunMode = build.ReleaseMode
 	}
@@ -306,6 +314,7 @@ func initBuildParameters(targetOS string, defaultBuildOrRunMode build.Mode) {
 
 	if buildOrRunMode.IsAot && targetOS != runtime.GOOS && !buildIgnoreHostOS {
 		log.Errorf("AOT builds currently only work on their host OS")
+		log.Errorf("Use the JIT release mode using the `--jit-release` flag instead")
 		os.Exit(1)
 	}
 
